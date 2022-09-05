@@ -7,10 +7,10 @@
 
 void initMDNS(const char* hostname)
 {
-  Serial.print("mDNS server instancing.");
-  while (!MDNS.begin(hostname)) {
-    Serial.print(".");
-    delay(300);
-  }
-  Serial.println("success!");
+    Serial.print("mDNS server instancing.");
+    while (!MDNS.begin(hostname)) {
+        Serial.print(".");
+        delay(300);
+    }
+    Serial.println("success!");
 }

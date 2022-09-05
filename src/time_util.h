@@ -11,5 +11,6 @@ extern rtc_time_t RTCtime;
 extern rtc_date_t RTCDate;
 
 void setupRTCTime();
-void showDateTime(char* lastTime);
+void showDateTime(const char* lastTime);
+
 #endif

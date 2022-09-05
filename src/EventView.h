@@ -8,10 +8,10 @@
 
 #include "ListItem.h"
 
-class EventItem : public ListItem
-{
-  public:
-    EventItem(int32_t x, int32_t y, JsonVariant event): ListItem(x, y, event) {};
+class EventItem : public ListItem {
+public:
+    EventItem(int32_t x, int32_t y, JsonVariant event)
+        : ListItem(x, y, event) {};
     void show();
 };
 

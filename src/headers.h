@@ -8,6 +8,6 @@
 
 #include <M5EPD.h>
 
-void drawHeader(int y, int height, int color, char* title);
+void drawHeader(int y, int height, int color, const char* title);
 
 #endif

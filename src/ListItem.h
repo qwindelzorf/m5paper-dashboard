@@ -10,13 +10,13 @@
 #include <M5EPD.h>
 
 class ListItem {
-  protected:
+protected:
     int x;
     int y;
     JsonVariant item;
     M5EPD_Canvas canvas;
 
-  public:
+public:
     static constexpr int ITEM_FONT_SIZE = 32;
     static constexpr int ITEM_MARGIN = 5;
     ListItem(int32_t x, int32_t y, JsonVariant item);
