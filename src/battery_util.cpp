@@ -41,7 +41,6 @@ void showBattery(char* lastBattery)
     char currentBattery[5];
     sprintf(currentBattery, "%4d%%", (int)(battery * 100));
     if (strcmp(lastBattery, currentBattery) != 0) {
-        Serial.printf("BATTERY VOL: %s\n", currentBattery);
         drawBattery(currentBattery);
         strcpy(lastBattery, currentBattery);
     }

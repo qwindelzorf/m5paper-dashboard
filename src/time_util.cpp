@@ -54,7 +54,6 @@ void showDateTime(char* lastTime)
         wd[RTCDate.week],
         RTCtime.hour, RTCtime.min);
     if (strcmp(lastTime, currentTime) != 0) {
-        Serial.println(currentTime);
         drawDateTime(currentTime);
         strcpy(lastTime, currentTime);
     }
