@@ -14,6 +14,7 @@
 
 #define FONT_SIZE 24
 #define MDNS_NAME "m5paper-dashboard"
+#undef MQTT_MAX_PACKET_SIZE
 #define MQTT_MAX_PACKET_SIZE 2048
 // #define WIFI_SSID // define in platformio.ini
 // #define WIFI_PASSWORD // define in platformio.ini
