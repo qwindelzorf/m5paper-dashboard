@@ -8,6 +8,6 @@
 
 #include <M5EPD.h>
 
-void showBattery(const char* lastBattery);
+void showBattery(char* lastBattery);
 
 #endif

@@ -45,7 +45,7 @@ void setupRTCTime()
     M5.RTC.setDate(&RTCDate);
 }
 
-void showDateTime(const char* lastTime)
+void showDateTime(char* lastTime)
 {
     char currentTime[23];
 

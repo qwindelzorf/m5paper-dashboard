@@ -23,7 +23,7 @@ void drawBattery(const char* battery)
     canvas.deleteCanvas();
 }
 
-void showBattery(const char* lastBattery)
+void showBattery(char* lastBattery)
 {
     uint32_t vol = M5.getBatteryVoltage();
     if (vol < 3300) {
