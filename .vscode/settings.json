@@ -1,0 +1,5 @@
+{
+    "makefile.extensionOutputFolder": "./.vscode",
+    "clangd.onConfigChanged": "restart",
+    "editor.formatOnSave": true,
+}
