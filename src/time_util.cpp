@@ -5,6 +5,11 @@
 
 #include "time_util.h"
 
+extern std::string FONT_FACE;
+extern int FONT_SIZE;
+extern int ROW_HEIGHT;
+extern int ROW_PADDING;
+
 time_t t;
 struct tm* tm;
 
@@ -13,17 +18,19 @@ static const char* wd[7] = { "Sun", "Mon", "Tue", "Wed", "Thr", "Fri", "Sat" };
 void drawDateTime(const char* timeStr)
 {
     int width = 475;
-    int height = 40;
-    int color = 15;
+    int height = ROW_HEIGHT;
+    int bgcolor = 15;
+    int fgcolor = 0;
     int ofsetY = (60 - height) / 2;
-    int fontSize = height;
+    int fontSize = ROW_HEIGHT;
     M5EPD_Canvas canvas(&M5.EPD);
-    canvas.loadFont("/font.ttf", SD);
+    canvas.loadFont(FONT_FACE.c_str(), SD);
     canvas.createRender(fontSize, 256);
 
     canvas.createCanvas(width, height);
+    canvas.fillCanvas(bgcolor);
     canvas.setTextSize(fontSize);
-    canvas.setTextColor(0, color);
+    canvas.setTextColor(fgcolor, bgcolor);
     canvas.drawString(timeStr, 0, 0);
     canvas.pushCanvas(20, ofsetY, UPDATE_MODE_A2);
     canvas.deleteCanvas();
@@ -45,13 +52,13 @@ void setupRTCTime()
     M5.RTC.setDate(&RTCDate);
 }
 
-void showDateTime(char* lastTime)
+char lastTime[23] = "0000/00/00 (000) 00:00";
+
+void showDateTime()
 {
     char currentTime[23];
 
-    sprintf(currentTime, "%d/%02d/%02d (%s) %02d:%02d",
-        RTCDate.year, RTCDate.mon, RTCDate.day,
-        wd[RTCDate.week],
+    sprintf(currentTime, "%d/%02d/%02d (%s) %02d:%02d", RTCDate.year, RTCDate.mon, RTCDate.day, wd[RTCDate.week],
         RTCtime.hour, RTCtime.min);
     if (strcmp(lastTime, currentTime) != 0) {
         drawDateTime(currentTime);

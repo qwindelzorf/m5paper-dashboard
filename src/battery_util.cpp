@@ -5,25 +5,49 @@
 
 #include "battery_util.h"
 
-void drawBattery(const char* battery)
+extern std::string FONT_FACE;
+extern int FONT_SIZE;
+extern int ROW_HEIGHT;
+extern int ROW_PADDING;
+
+void drawBattery(std::string battery)
 {
-    int width = 80;
-    int height = 30;
-    int color = 15;
-    int fontSize = height;
+    int width = 40;
+    int height = ROW_HEIGHT;
+    int bgcolor = 15;
+    int fgcolor = 0;
+    int fontSize = ROW_HEIGHT;
     M5EPD_Canvas canvas(&M5.EPD);
-    canvas.loadFont("/font.ttf", SD);
+    canvas.loadFont(FONT_FACE.c_str(), SD);
     canvas.createRender(fontSize, 256);
 
     canvas.createCanvas(width, height);
+    canvas.fillCanvas(bgcolor);
     canvas.setTextSize(fontSize);
-    canvas.setTextColor(0, color);
-    canvas.drawString(battery, 0, 0);
-    canvas.pushCanvas(960 - width - 20, 25, UPDATE_MODE_A2);
+    canvas.setTextColor(fgcolor, bgcolor);
+    canvas.drawString(battery.c_str(), 0, 0);
+    canvas.pushCanvas(960 - width - ROW_PADDING, 0, UPDATE_MODE_A2);
     canvas.deleteCanvas();
 }
 
-void showBattery(char* lastBattery)
+std::string battery_icon(float pct)
+{
+    if (pct > 95) return "";
+    if (pct > 90) return "";
+    if (pct > 80) return "";
+    if (pct > 70) return "";
+    if (pct > 60) return "";
+    if (pct > 50) return "";
+    if (pct > 40) return "";
+    if (pct > 30) return "";
+    if (pct > 20) return "";
+    if (pct > 10) return "";
+    return "";
+}
+
+std::string lastBattery;
+
+void showBattery()
 {
     uint32_t vol = M5.getBatteryVoltage();
     if (vol < 3300) {
@@ -31,17 +55,13 @@ void showBattery(char* lastBattery)
     } else if (vol > 4350) {
         vol = 4350;
     }
-    float battery = (float)(vol - 3300) / (float)(4350 - 3300);
-    if (battery <= 0.01) {
-        battery = 0.01;
-    } else if (battery > 1) {
-        battery = 1;
-    }
+    float battery_pct = (float)(vol - 3300) / (float)(4350 - 3300) * 100.0f;
+    battery_pct = min(battery_pct, 100.0f);
+    battery_pct = max(battery_pct, 0.0f);
 
-    char currentBattery[5];
-    sprintf(currentBattery, "%4d%%", (int)(battery * 100));
-    if (strcmp(lastBattery, currentBattery) != 0) {
+    auto currentBattery = battery_icon(battery_pct);
+    if (currentBattery != lastBattery) {
         drawBattery(currentBattery);
-        strcpy(lastBattery, currentBattery);
+        lastBattery = currentBattery;
     }
 }

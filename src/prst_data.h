@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <stdint.h>
 
+#include "battery_util.h"
+
 struct prst_sensor_data_t {
     uint16_t batt_mv;
     float temp_c;
@@ -17,6 +19,14 @@ struct prst_sensor_data_t {
     uint8_t protocol_version;
 
     const uint8_t supported_protocol_version = 2;
+
+    float battery_pct() const
+    {
+        float batt_max = 3200.0;
+        float batt_min = 2200.0;
+        float pct = (batt_mv - batt_min) / (batt_max - batt_min) * 100.0;
+        return pct;
+    }
 
     static prst_sensor_data_t from_servicedata(const uint8_t* service_data)
     {
@@ -67,20 +77,13 @@ struct prst_sensor_data_t {
     void to_str(char* str, size_t maxlen) const
     {
         if (has_light_sensor) {
-            snprintf(str, maxlen, "%02x:%02x:%02x:%02x:%02x:%02x - Soil: %.0f%%, %.1fC, %.1f%%RH, %.0flux, %.2fV",
+            snprintf(str, maxlen, "%02x:%02x:%02x:%02x:%02x:%02x %s - Soil: %.0f%%, %.1fC, %.1f%%RH, %.0flux",
                 mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5],
-                soil_moisture / 655.35,
-                temp_c,
-                humi / 1000.0,
-                lux * 1.0,
-                batt_mv / 1000.0);
+                battery_icon(battery_pct()).c_str(), soil_moisture / 655.35, temp_c, humi / 1000.0, lux * 1.0);
         } else {
-            snprintf(str, maxlen, "%02x:%02x:%02x:%02x:%02x:%02x - Soil: %.0f%%, %.1fC, %.1f%%RH, %.2fV",
-                mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5],
-                soil_moisture / 655.35,
-                temp_c,
-                humi / 1000.0,
-                batt_mv / 1000.0);
+            snprintf(str, maxlen, "%02x:%02x:%02x:%02x:%02x:%02x %s - Soil: %.0f%%, %.1fC, %.1f%%RH", mac_addr[0],
+                mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5], battery_icon(battery_pct()).c_str(),
+                soil_moisture / 655.35, temp_c, humi / 1000.0);
         }
     };
 };

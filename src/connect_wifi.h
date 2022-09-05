@@ -7,4 +7,4 @@
 
 extern WiFiClient wifiClient;
 
-void connectWifi(const char* ssid, const char* password);
+bool connectWifi(const char* ssid, const char* password, unsigned timeout = 0);

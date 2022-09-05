@@ -6,10 +6,15 @@
 
 WiFiClient wifiClient;
 
-void connectWifi(const char* ssid, const char* password)
+bool connectWifi(const char* ssid, const char* password, unsigned timeout)
 {
+    auto start = millis();
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) {
-        delay(1500);
+        delay(1000);
+        if (timeout > 0 && (millis() - start) > timeout) {
+            return false;
+        }
     }
+    return true;
 }

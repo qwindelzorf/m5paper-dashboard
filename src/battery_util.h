@@ -7,7 +7,9 @@
 #define _BATTERY_UTIL_H_
 
 #include <M5EPD.h>
+#include <string>
 
-void showBattery(char* lastBattery);
+void showBattery();
+std::string battery_icon(float pct);
 
 #endif
