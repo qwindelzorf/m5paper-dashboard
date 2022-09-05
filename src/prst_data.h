@@ -4,19 +4,33 @@
 #include <cstddef>
 #include <cstdint>
 #include <stdint.h>
+#include <string>
 
 #include "battery_util.h"
+
+struct mac_addr_t {
+    uint8_t bytes[6];
+
+    std::string to_str() const
+    {
+        char mac_str[18];
+        snprintf(mac_str, 18, "%02x-%02x-%02x-%02x-%02x-%02x",
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]);
+        return std::string(mac_str);
+    };
+};
 
 struct prst_sensor_data_t {
     uint16_t batt_mv;
     float temp_c;
     uint16_t humi;
     uint16_t soil_moisture;
-    uint16_t lux;
+    uint16_t light;
     uint8_t run_counter;
-    uint8_t mac_addr[6];
+    mac_addr_t mac_addr;
     bool has_light_sensor;
     uint8_t protocol_version;
+    std::string alias = "";
 
     const uint8_t supported_protocol_version = 2;
 
@@ -63,12 +77,12 @@ struct prst_sensor_data_t {
 
         // Bytes 10-15 (inclusive) contain the whole MAC address in big-endian.
         for (int i = 0; i < 6; i++) {
-            sensor.mac_addr[i] = service_data[10 + i];
+            sensor.mac_addr.bytes[i] = service_data[10 + i];
         }
 
         if (sensor.has_light_sensor) {
-            sensor.lux = service_data[16] << 8;
-            sensor.lux |= service_data[17];
+            sensor.light = service_data[16] << 8;
+            sensor.light |= service_data[17];
         }
 
         return sensor;
@@ -76,14 +90,19 @@ struct prst_sensor_data_t {
 
     void to_str(char* str, size_t maxlen) const
     {
+        std::string name = alias.empty() ? mac_addr.to_str() : alias;
+        std::string batt_icon = battery_icon(battery_pct()).c_str();
+        float soil_pct = soil_moisture / 655.35;
+        float temp_f = (temp_c * 1.8f) + 32.0;
+        float hum_pct = humi / 1000.0;
+        float lux = light * 1.0f;
+
         if (has_light_sensor) {
-            snprintf(str, maxlen, "%02x:%02x:%02x:%02x:%02x:%02x %s - Soil: %.0f%%, %.1fC, %.1f%%RH, %.0flux",
-                mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5],
-                battery_icon(battery_pct()).c_str(), soil_moisture / 655.35, temp_c, humi / 1000.0, lux * 1.0);
+            snprintf(str, maxlen, "%1s %-18s  —  %2.0f%%, %3.1f°F, %2.1f%%RH, %.0flux",
+                batt_icon.c_str(), name.c_str(), soil_pct, temp_f, hum_pct, lux);
         } else {
-            snprintf(str, maxlen, "%02x:%02x:%02x:%02x:%02x:%02x %s - Soil: %.0f%%, %.1fC, %.1f%%RH", mac_addr[0],
-                mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5], battery_icon(battery_pct()).c_str(),
-                soil_moisture / 655.35, temp_c, humi / 1000.0);
+            snprintf(str, maxlen, "%1s %-18s  —  %2.0f%%, %3.1f°F, %2.1f%%RH",
+                batt_icon.c_str(), name.c_str(), soil_pct, temp_f, hum_pct);
         }
     };
 };
