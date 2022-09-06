@@ -17,7 +17,7 @@ static const char* wd[7] = { "Sun", "Mon", "Tue", "Wed", "Thr", "Fri", "Sat" };
 
 void drawDateTime(const char* timeStr)
 {
-    int width = 475;
+    int width = 800;
     int height = ROW_HEIGHT;
     int bgcolor = 15;
     int fgcolor = 0;
