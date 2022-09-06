@@ -1,7 +1,5 @@
 #include "config_file.h"
 
-using namespace std;
-
 bool has_key(const std::string& key, const std::map<std::string, std::string>& config)
 {
     if (config.find(key) == config.end())
@@ -15,12 +13,12 @@ std::string value_or(const std::string& key, const std::map<std::string, std::st
     return config.at(key);
 }
 
-std::map<string, string> read_file_to_map(File& in_file)
+std::map<std::string, std::string> read_file_to_map(SDFile& in_file)
 {
-    std::map<string, string> kv_pairs;
+    std::map<std::string, std::string> kv_pairs;
     while (in_file.available()) {
-        auto k = rtrim_copy(string(in_file.readStringUntil(':').c_str()));
-        auto v = rtrim_copy(string(in_file.readStringUntil('\n').c_str()));
+        auto k = trim_copy(std::string(in_file.readStringUntil(':').c_str()));
+        auto v = trim_copy(std::string(in_file.readStringUntil('\n').c_str()));
         kv_pairs[k] = v;
     }
     return kv_pairs;

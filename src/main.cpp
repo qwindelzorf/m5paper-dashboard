@@ -49,9 +49,44 @@ void drawRow(const char* text, int y, int fontSize = 0, int fgcolor = 15, int bg
     canvas.pushCanvas(0, y, UPDATE_MODE_GLR16);
     canvas.deleteCanvas();
 }
+void drawRow(const string& text, int y, int fontSize = 0, int fgcolor = 15, int bgcolor = 0)
+{
+    drawRow(text.c_str(), y, fontSize, fgcolor, bgcolor);
+}
 void drawHeader(const char* title, int y = 0, int fgcolor = 15, int bgcolor = 0)
 {
     drawRow(title, y, ROW_HEIGHT, fgcolor, bgcolor);
+}
+void drawHeader(const string& title, int y = 0, int fgcolor = 15, int bgcolor = 0)
+{
+    drawHeader(title.c_str(), y, fgcolor, bgcolor);
+}
+
+void showTemperature()
+{
+    int width = 150;
+    int height = ROW_HEIGHT;
+    int bgcolor = 15;
+    int fgcolor = 0;
+    int fontSize = 45;
+
+    M5.SHT30.UpdateData();
+    float temp_c = M5.SHT30.GetTemperature();
+    float temp_f = (temp_c * 1.8) + 32.0;
+    char temperature[10];
+    auto written = std::snprintf(temperature, 10, "%.1f°F", temp_f);
+
+    M5EPD_Canvas canvas(&M5.EPD);
+    canvas.loadFont(FONT_FACE.c_str(), SD);
+    canvas.createRender(fontSize, 256);
+
+    canvas.createCanvas(width, height);
+    canvas.fillCanvas(bgcolor);
+    canvas.setTextSize(fontSize);
+    canvas.setTextColor(fgcolor, bgcolor);
+    canvas.drawString(temperature, 0, ROW_PADDING);
+    canvas.pushCanvas(SCREEN_WIDTH - 50 - width - ROW_PADDING, 0, UPDATE_MODE_A2);
+    canvas.deleteCanvas();
 }
 
 NimBLEScan* pBLEScan;
@@ -94,14 +129,15 @@ void setup()
     M5.EPD.SetRotation(0);
     M5.EPD.Clear(true);
 
-    if (!SPIFFS.begin(false, "/")) {
+    if (!SD.begin()) {
         drawHeader("Failed to start filesystem");
         delay(5000);
     } else {
         drawHeader("Loading...", 0, 0, 15);
 
-        File config_file = SPIFFS.open("/config.txt", FILE_READ);
+        SDFile config_file = SD.open("/config.txt", FILE_READ);
         if (config_file.available()) {
+            drawRow("Reading config.txt", ROW_NUM(1));
             auto config_data = read_file_to_map(config_file);
             FONT_FACE = string("/") + value_or("font_face", config_data, FONT_FACE);
             FONT_SIZE = has_key("font_size", config_data) ? stoi(config_data["font_size"]) : FONT_SIZE;
@@ -113,8 +149,9 @@ void setup()
             delay(5000);
         }
 
-        File wifi_file = SPIFFS.open("/wifi.txt", FILE_READ);
+        SDFile wifi_file = SD.open("/wifi.txt", FILE_READ);
         if (wifi_file.available()) {
+            drawRow("Reading wifi.txt", ROW_NUM(1));
             auto wifi_data = read_file_to_map(wifi_file);
             string wifi_ssid = value_or("wifi_ssid", wifi_data, "");
             string wifi_password = value_or("wifi_password", wifi_data, "");
@@ -129,8 +166,9 @@ void setup()
             delay(5000);
         }
 
-        File tz_file = SPIFFS.open("/tz.txt", FILE_READ);
+        SDFile tz_file = SD.open("/tz.txt", FILE_READ);
         if (tz_file.available()) {
+            drawRow("Reading tz.txt", ROW_NUM(1));
             auto tz_data = read_file_to_map(tz_file);
             string tz = value_or("tz", tz_data, "MST7MDT,M3.2.0,M11.1.0");
             string ntp_server_1 = value_or("ntp_server_1", tz_data, "pool.ntp.org");
@@ -146,8 +184,9 @@ void setup()
             delay(5000);
         }
 
-        File sensor_file = SPIFFS.open("/sensors.txt", FILE_READ);
+        SDFile sensor_file = SD.open("/sensors.txt", FILE_READ);
         if (sensor_file.available()) {
+            drawRow("Reading sensors.txt", ROW_NUM(1));
             auto sensor_data = read_file_to_map(sensor_file);
             int idx = 1;
             for (const auto& pair : sensor_data) {
@@ -177,6 +216,7 @@ void setup()
     drawHeader("", ROW_NUM(0), 0, 15);
     showDateTime();
     showBattery();
+    showTemperature();
     drawHeader("Devices", ROW_NUM(1), 0, 10);
 }
 
@@ -214,6 +254,8 @@ void loop()
 
     M5.RTC.getDate(&RTCDate);
     showBattery();
+
+    showTemperature();
 
     showDeviceCounts();
 
