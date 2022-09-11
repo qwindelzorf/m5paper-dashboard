@@ -194,8 +194,9 @@ void setup()
       auto wifi_data = read_file_to_map(wifi_file);
       WIFI_SSID = value_or("wifi_ssid", wifi_data, "");
       WIFI_PASS = value_or("wifi_password", wifi_data, "");
+
       HOSTNAME = value_or("hostname", wifi_data, "bprst-monitor");
-      drawRow((string("Connecting to: ") + WIFI_SSID), ROW_NUM(2));
+      drawRow((string("Connecting to: '") + WIFI_SSID), ROW_NUM(2));
       wifi_connect();
     } else {
       drawHeader("Failed to open wifi.txt");
@@ -297,7 +298,7 @@ void loop()
 
   showTemperature();
 
-  // showWiFi();
+  showWiFi();
 
   showDeviceCounts();
 
