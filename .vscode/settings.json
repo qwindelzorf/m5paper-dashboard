@@ -4,6 +4,8 @@
     "editor.formatOnSave": true,
     "C_Cpp.clang_format_style": "file",
     "C_Cpp.clang_format_fallbackStyle": "WebKit",
+    "editor.tabSize": 2,
+    "editor.detectIndentation": true,
     "files.associations": {
         "array": "cpp",
         "atomic": "cpp",
