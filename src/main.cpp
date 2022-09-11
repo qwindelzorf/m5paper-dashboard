@@ -25,6 +25,12 @@ int FONT_SIZE = 42;
 int ROW_HEIGHT = 60;
 int ROW_PADDING = 5;
 unsigned REFRESH_INTERVAL = 1000;
+string WIFI_SSID;
+string WIFI_PASS;
+string HOSTNAME;
+
+bool WIFI_CONNECTED;
+bool NTP_REFRESHED;
 
 const int SCREEN_WIDTH = 960;
 const int SCREEN_HEIGHT = 540;
@@ -32,12 +38,24 @@ const int SCREEN_HEIGHT = 540;
 rtc_time_t RTCtime;
 rtc_date_t RTCDate;
 
+void wifi_connect()
+{
+    if (!(WIFI_SSID.empty() && WIFI_PASS.empty()) && !WIFI_CONNECTED) {
+        bool connected = connectWifi(WIFI_SSID.c_str(), WIFI_PASS.c_str(), 10000);
+        if (connected) {
+            initMDNS(HOSTNAME.c_str());
+            WIFI_CONNECTED = true;
+        } else {
+            WIFI_CONNECTED = false;
+        }
+    }
+}
+
 void drawRow(const char* text, int y, int fontSize = 0, int fgcolor = 15, int bgcolor = 0)
 {
     M5EPD_Canvas canvas(&M5.EPD);
     int margin = ROW_PADDING;
-    if (fontSize == 0)
-        fontSize = ROW_HEIGHT - margin * 2;
+    if (fontSize == 0) fontSize = ROW_HEIGHT - margin * 2;
 
     canvas.loadFont(FONT_FACE.c_str(), SD);
     canvas.createRender(fontSize, 256);
@@ -62,9 +80,33 @@ void drawHeader(const string& title, int y = 0, int fgcolor = 15, int bgcolor = 
     drawHeader(title.c_str(), y, fgcolor, bgcolor);
 }
 
+void showWiFi()
+{
+    int width = 50;
+    int height = ROW_HEIGHT;
+    int bgcolor = 15;
+    int fgcolor = 0;
+    int fontSize = 45;
+
+    wifi_connect();
+    string wifi_conn = WIFI_CONNECTED ? "直" : "睊";
+
+    M5EPD_Canvas canvas(&M5.EPD);
+    canvas.loadFont(FONT_FACE.c_str(), SD);
+    canvas.createRender(fontSize, 256);
+
+    canvas.createCanvas(width, height);
+    canvas.fillCanvas(bgcolor);
+    canvas.setTextSize(fontSize);
+    canvas.setTextColor(fgcolor, bgcolor);
+    canvas.drawString(wifi_conn.c_str(), 0, ROW_PADDING);
+    canvas.pushCanvas(SCREEN_WIDTH - 200 - width - ROW_PADDING, 0, UPDATE_MODE_A2);
+    canvas.deleteCanvas();
+}
+
 void showTemperature()
 {
-    int width = 150;
+    int width = 130;
     int height = ROW_HEIGHT;
     int bgcolor = 15;
     int fgcolor = 0;
@@ -74,7 +116,7 @@ void showTemperature()
     float temp_c = M5.SHT30.GetTemperature();
     float temp_f = (temp_c * 1.8) + 32.0;
     char temperature[10];
-    auto written = std::snprintf(temperature, 10, "%.1f°F", temp_f);
+    auto written = std::snprintf(temperature, 10, "%.0f°F", temp_f);
 
     M5EPD_Canvas canvas(&M5.EPD);
     canvas.loadFont(FONT_FACE.c_str(), SD);
@@ -100,21 +142,17 @@ class AdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallbacks {
         seen_devices += 1;
 
         // This name decodes as 🌱
-        if (advertisedDevice->getName() != "\xf0\x9f\x8c\xb1")
-            return;
+        if (advertisedDevice->getName() != "\xf0\x9f\x8c\xb1") return;
 
         auto numSDs = advertisedDevice->getServiceDataCount();
-        if (numSDs != 1)
-            return;
+        if (numSDs != 1) return;
 
         char service_data[20];
         strncpy(service_data, advertisedDevice->getServiceData(0).c_str(), 20);
         auto sensor_data = prst_sensor_data_t::from_servicedata((uint8_t*)service_data);
 
-        if (sensor_data.mac_addr.bytes[0] < 0xd0)
-            return;
-        if (sensor_data.batt_mv == 0)
-            return;
+        if (sensor_data.mac_addr.bytes[0] < 0xd0) return;
+        if (sensor_data.batt_mv == 0) return;
 
         sensor_data.alias = value_or(sensor_data.mac_addr.to_str(), sensor_names, "");
 
@@ -143,7 +181,8 @@ void setup()
             FONT_SIZE = has_key("font_size", config_data) ? stoi(config_data["font_size"]) : FONT_SIZE;
             ROW_HEIGHT = has_key("row_height", config_data) ? stoi(config_data["row_height"]) : ROW_HEIGHT;
             ROW_PADDING = has_key("row_padding", config_data) ? stoi(config_data["row_padding"]) : ROW_PADDING;
-            REFRESH_INTERVAL = has_key("refresh_interval", config_data) ? stoi(config_data["refresh_interval"]) : REFRESH_INTERVAL;
+            REFRESH_INTERVAL =
+                has_key("refresh_interval", config_data) ? stoi(config_data["refresh_interval"]) : REFRESH_INTERVAL;
         } else {
             drawHeader("Failed to open config.txt");
             delay(5000);
@@ -153,14 +192,11 @@ void setup()
         if (wifi_file.available()) {
             drawRow("Reading wifi.txt", ROW_NUM(1));
             auto wifi_data = read_file_to_map(wifi_file);
-            string wifi_ssid = value_or("wifi_ssid", wifi_data, "");
-            string wifi_password = value_or("wifi_password", wifi_data, "");
-            string hostname = value_or("hostname", wifi_data, "bprst-monitor");
-            if (!(wifi_ssid.empty() && wifi_password.empty())) {
-                bool connected = connectWifi(wifi_ssid.c_str(), wifi_password.c_str(), 10000);
-                if (connected)
-                    initMDNS(hostname.c_str());
-            }
+            WIFI_SSID = value_or("wifi_ssid", wifi_data, "");
+            WIFI_PASS = value_or("wifi_password", wifi_data, "");
+            HOSTNAME = value_or("hostname", wifi_data, "bprst-monitor");
+            drawRow((string("Connecting to: ") + WIFI_SSID), ROW_NUM(2));
+            wifi_connect();
         } else {
             drawHeader("Failed to open wifi.txt");
             delay(5000);
@@ -174,9 +210,11 @@ void setup()
             string ntp_server_1 = value_or("ntp_server_1", tz_data, "pool.ntp.org");
             string ntp_server_2 = value_or("ntp_server_2", tz_data, "time.nist.gov");
             string ntp_server_3 = value_or("ntp_server_3", tz_data, "time.google.com");
-            if (!(tz.empty())) {
+            NTP_REFRESHED = false;
+            if (!(tz.empty()) && WIFI_CONNECTED) {
                 configTime(0, 0, ntp_server_1.c_str(), ntp_server_2.c_str(), ntp_server_3.c_str());
                 configTzTime(tz.c_str(), ntp_server_1.c_str(), ntp_server_2.c_str(), ntp_server_3.c_str());
+                NTP_REFRESHED = true;
                 delay(2000);
             }
         } else {
@@ -209,9 +247,11 @@ void setup()
     // Set the callback for when devices are discovered, no duplicates.
     pBLEScan->setAdvertisedDeviceCallbacks(new AdvertisedDeviceCallbacks(), false);
     pBLEScan->setActiveScan(true); // Set active scanning, this will get more data from the advertiser.
-    pBLEScan->setInterval(97); // How often the scan occurs / switches channels; in milliseconds,
-    pBLEScan->setWindow(37); // How long to scan during the interval; in milliseconds.
-    pBLEScan->setMaxResults(0); // do not store the scan results, use callback only.
+    pBLEScan->setInterval(97);     // How often the scan occurs / switches channels; in milliseconds,
+    pBLEScan->setWindow(37);       // How long to scan during the interval; in milliseconds.
+    pBLEScan->setMaxResults(0);    // do not store the scan results, use callback only.
+
+    M5.EPD.Clear(true);
 
     drawHeader("", ROW_NUM(0), 0, 15);
     showDateTime();
@@ -256,6 +296,8 @@ void loop()
     showBattery();
 
     showTemperature();
+
+    // showWiFi();
 
     showDeviceCounts();
 
