@@ -28,6 +28,7 @@ unsigned REFRESH_INTERVAL = 1000;
 string WIFI_SSID;
 string WIFI_PASS;
 string HOSTNAME;
+int TEMPERATURE_CALIBRATION = 0;
 
 bool WIFI_CONNECTED;
 bool NTP_REFRESHED;
@@ -115,6 +116,7 @@ void showTemperature()
   M5.SHT30.UpdateData();
   float temp_c = M5.SHT30.GetTemperature();
   float temp_f = (temp_c * 1.8) + 32.0;
+  temp_f += TEMPERATURE_CALIBRATION;
   char temperature[10];
   auto written = std::snprintf(temperature, 10, "%.0f°F", temp_f);
 
@@ -181,6 +183,9 @@ void setup()
       FONT_SIZE = has_key("font_size", config_data) ? stoi(config_data["font_size"]) : FONT_SIZE;
       ROW_HEIGHT = has_key("row_height", config_data) ? stoi(config_data["row_height"]) : ROW_HEIGHT;
       ROW_PADDING = has_key("row_padding", config_data) ? stoi(config_data["row_padding"]) : ROW_PADDING;
+      TEMPERATURE_CALIBRATION = has_key("temperature_calibration", config_data)
+          ? stoi(config_data["temperature_calibration"])
+          : TEMPERATURE_CALIBRATION;
       REFRESH_INTERVAL =
           has_key("refresh_interval", config_data) ? stoi(config_data["refresh_interval"]) : REFRESH_INTERVAL;
     } else {
