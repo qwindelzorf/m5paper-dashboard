@@ -7,7 +7,7 @@
 
 void initMDNS(const char* hostname)
 {
-  while (!MDNS.begin(hostname)) {
-    delay(300);
-  }
+    while (!MDNS.begin(hostname)) {
+        delay(300);
+    }
 }
