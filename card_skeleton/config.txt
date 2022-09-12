@@ -1,4 +1,4 @@
-font_face: default.ttf
+font_face: monofur_nf.ttf
 font_size: 40
 row_height: 60
 row_padding: 5
