@@ -7,5 +7,3 @@ AllowShortLoopsOnASingleLine: true
 BreakBeforeBinaryOperators: false
 SortIncludes: true
 NamespaceIndentation: All
-IndentWidth: 2
-AccessModifierOffset: -2
