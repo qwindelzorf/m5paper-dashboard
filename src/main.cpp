@@ -29,6 +29,7 @@ string WIFI_SSID;
 string WIFI_PASS;
 string HOSTNAME;
 int TEMPERATURE_CALIBRATION = 0;
+unsigned long SENSOR_TIMEOUT = 60 * 60 * 1000;
 
 bool WIFI_CONNECTED;
 bool NTP_REFRESHED;
@@ -135,8 +136,9 @@ void showTemperature()
 
 NimBLEScan* pBLEScan;
 unsigned seen_devices = 0;
-vector<prst_sensor_data_t> sensor_datas;
-std::map<std::string, std::string> sensor_names;
+vector<prst_sensor_data_t> new_sensors;
+vector<prst_sensor_data_t> active_sensors;
+std::map<string, string> sensor_names;
 
 class AdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallbacks {
   void onResult(NimBLEAdvertisedDevice* advertisedDevice)
@@ -153,12 +155,12 @@ class AdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallbacks {
     strncpy(service_data, advertisedDevice->getServiceData(0).c_str(), 20);
     auto sensor_data = prst_sensor_data_t::from_servicedata((uint8_t*)service_data);
 
-    if (sensor_data.mac_addr.bytes[0] < 0xd0) return;
+    if (sensor_data.mac_addr.bytes[0] < 0xc0) return;
     if (sensor_data.batt_mv == 0) return;
 
     sensor_data.alias = value_or(sensor_data.mac_addr.to_str(), sensor_names, "");
 
-    sensor_datas.push_back(sensor_data);
+    new_sensors.push_back(sensor_data);
   }
 };
 
@@ -188,6 +190,8 @@ void setup()
           : TEMPERATURE_CALIBRATION;
       REFRESH_INTERVAL =
           has_key("refresh_interval", config_data) ? stoi(config_data["refresh_interval"]) : REFRESH_INTERVAL;
+      SENSOR_TIMEOUT =
+          has_key("sensor_timeout", config_data) ? stoi(config_data["sensor_timeout"]) * 1000 : SENSOR_TIMEOUT;
     } else {
       drawHeader("Failed to open config.txt");
       delay(5000);
@@ -201,7 +205,7 @@ void setup()
       WIFI_PASS = value_or("wifi_password", wifi_data, "");
 
       HOSTNAME = value_or("hostname", wifi_data, "bprst-monitor");
-      drawRow((string("Connecting to: '") + WIFI_SSID), ROW_NUM(2));
+      drawRow((string("Connecting to: '") + WIFI_SSID + "'"), ROW_NUM(2));
       wifi_connect();
     } else {
       drawHeader("Failed to open wifi.txt");
@@ -233,6 +237,7 @@ void setup()
       drawRow("Reading sensors.txt", ROW_NUM(1));
       auto sensor_data = read_file_to_map(sensor_file);
       int idx = 1;
+      sensor_names["00-00-00-00-00-00"] = "<< no mac >>";
       for (const auto& pair : sensor_data) {
         sensor_names[pair.first] = pair.second;
         drawRow((pair.first + string(" => ") + pair.second).c_str(), ROW_NUM(idx++));
@@ -271,7 +276,7 @@ void showDeviceCounts()
   char seen_str[16];
   sprintf(seen_str, "%4d seen", (int)(seen_devices));
   char valid_str[16];
-  sprintf(valid_str, "%4d valid", (int)(sensor_datas.size()));
+  sprintf(valid_str, "%4d valid", (int)(active_sensors.size()));
 
   int width = 400;
   int height = 30;
@@ -311,17 +316,41 @@ void loop()
     pBLEScan->start(REFRESH_INTERVAL, nullptr, false);
   }
 
-  // Redraw device list
-  unsigned idx = 0;
-  for (const auto& sensor_data : sensor_datas) {
-    const size_t line_len = 64;
-    char line[line_len];
-    sensor_data.to_str(line, line_len);
-
-    drawRow(line, ROW_NUM(idx + 2), 30);
+  // time out old sensors
+  unsigned long now = millis();
+  for (auto it = active_sensors.begin(); it != active_sensors.end(); it++) {
+    if (now - it->timestamp > SENSOR_TIMEOUT) {
+      active_sensors.erase(it);
+    }
   }
 
-  sensor_datas.clear();
+  // process new sensors
+  unsigned idx = 0;
+  for (const auto& new_sensor : new_sensors) {
+    bool known_sensor = false;
+    for (auto& old_sensor : active_sensors) {
+      if (old_sensor.mac_addr == new_sensor.mac_addr) {
+        old_sensor = new_sensor;
+        known_sensor = true;
+        break;
+      }
+    }
+    if (!known_sensor) {
+      active_sensors.push_back(new_sensor);
+    }
+  }
+
+  // draw active sensor info to screen
+  idx = 0;
+  for (const auto& sensor : active_sensors) {
+    const size_t line_len = 64;
+    char line[line_len];
+    sensor.to_str(line, line_len);
+    drawRow(line, (idx + 2) * (ROW_HEIGHT + ROW_PADDING), 30);
+    ++idx;
+  }
+
+  new_sensors.clear();
   seen_devices = 0;
   delay(REFRESH_INTERVAL);
 }
