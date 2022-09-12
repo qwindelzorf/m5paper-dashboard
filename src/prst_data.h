@@ -18,6 +18,19 @@ struct mac_addr_t {
     return std::string(mac_str);
   };
 };
+inline bool operator==(const mac_addr_t& lhs, const mac_addr_t& rhs)
+{
+  for (int i = 0; i < 6; ++i) {
+    if (lhs.bytes[i] != rhs.bytes[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+inline bool operator!=(const mac_addr_t& lhs, const mac_addr_t& rhs)
+{
+  return !(lhs == rhs);
+}
 
 struct prst_sensor_data_t {
   uint16_t batt_mv;
@@ -29,9 +42,94 @@ struct prst_sensor_data_t {
   mac_addr_t mac_addr;
   bool has_light_sensor;
   uint8_t protocol_version;
-  std::string alias = "";
+  std::string alias;
+  unsigned long timestamp;
 
   const uint8_t supported_protocol_version = 2;
+
+public:
+  prst_sensor_data_t()
+      : batt_mv(0)
+      , temp_c(0)
+      , humi(0)
+      , soil_moisture(0)
+      , light(0)
+      , run_counter(0)
+      , mac_addr({ 0, 0, 0, 0, 0, 0 })
+      , has_light_sensor(false)
+      , protocol_version(supported_protocol_version)
+      , alias("")
+      , timestamp(millis())
+  {
+  }
+  prst_sensor_data_t(const prst_sensor_data_t& other)
+      : batt_mv(other.batt_mv)
+      , temp_c(other.temp_c)
+      , humi(other.humi)
+      , soil_moisture(other.soil_moisture)
+      , light(other.light)
+      , run_counter(other.run_counter)
+      , mac_addr(other.mac_addr)
+      , has_light_sensor(other.has_light_sensor)
+      , protocol_version(other.protocol_version)
+      , alias(other.alias)
+      , timestamp(other.timestamp)
+  {
+  }
+  prst_sensor_data_t(prst_sensor_data_t&& other)
+      : batt_mv(other.batt_mv)
+      , temp_c(other.temp_c)
+      , humi(other.humi)
+      , soil_moisture(other.soil_moisture)
+      , light(other.light)
+      , run_counter(other.run_counter)
+      , mac_addr(other.mac_addr)
+      , has_light_sensor(other.has_light_sensor)
+      , protocol_version(other.protocol_version)
+      , alias(other.alias)
+      , timestamp(other.timestamp)
+  {
+    other.timestamp = 0;
+    other.alias = "";
+    other.mac_addr = { 0, 0, 0, 0, 0, 0 };
+  }
+  prst_sensor_data_t& operator=(const prst_sensor_data_t& other)
+  {
+    if (&other != this) {
+      batt_mv = other.batt_mv;
+      temp_c = other.temp_c;
+      humi = other.humi;
+      soil_moisture = other.soil_moisture;
+      light = other.light;
+      run_counter = other.run_counter;
+      mac_addr = other.mac_addr;
+      has_light_sensor = other.has_light_sensor;
+      protocol_version = other.protocol_version;
+      alias = other.alias;
+      timestamp = other.timestamp;
+    }
+    return *this;
+  }
+  prst_sensor_data_t& operator=(prst_sensor_data_t&& other)
+  {
+    if (&other != this) {
+      batt_mv = other.batt_mv;
+      temp_c = other.temp_c;
+      humi = other.humi;
+      soil_moisture = other.soil_moisture;
+      light = other.light;
+      run_counter = other.run_counter;
+      mac_addr = other.mac_addr;
+      has_light_sensor = other.has_light_sensor;
+      protocol_version = other.protocol_version;
+      alias = other.alias;
+      timestamp = other.timestamp;
+    }
+    return *this;
+  }
+  ~prst_sensor_data_t()
+  {
+  }
 
   float battery_pct() const
   {
@@ -83,6 +181,8 @@ struct prst_sensor_data_t {
       sensor.light = service_data[16] << 8;
       sensor.light |= service_data[17];
     }
+
+    sensor.timestamp = millis();
 
     return sensor;
   };
